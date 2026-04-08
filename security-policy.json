@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "sandbox_required": true,
+  "network_egress": {
+    "policy": "deny-all-except-allowlist",
+    "allowlist": ["api.anthropic.com"],
+    "denylist_note": "No paste services, no gists, no DNS side channels, no port-binding exfil. The user is responsible for network isolation. Run MJR behind a host firewall or inside a netns that enforces the allowlist."
+  },
+  "refuses": [
+    "host-role invocation",
+    "non-sandboxed exploit reproduction",
+    "modification of source control (.git)",
+    "writing to tests/ to force a pass",
+    "simulated keypresses or UI-prompt bypass",
+    "any task outside the three declared skills"
+  ],
+  "max_turns": 25,
+  "max_retries_per_tool": 3,
+  "subagent_max_depth": 1
+}
