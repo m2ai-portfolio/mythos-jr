@@ -1,5 +1,11 @@
 # Mythos Jr (MJR)
 
+[![npm version](https://img.shields.io/npm/v/@m2ai/mythos-jr?style=flat-square)](https://www.npmjs.com/package/@m2ai/mythos-jr)
+[![npm downloads](https://img.shields.io/npm/dm/@m2ai/mythos-jr?style=flat-square)](https://www.npmjs.com/package/@m2ai/mythos-jr)
+[![license](https://img.shields.io/npm/l/@m2ai/mythos-jr?style=flat-square)](./LICENSE)
+[![node](https://img.shields.io/node/v/@m2ai/mythos-jr?style=flat-square)](./package.json)
+[![A2A Protocol](https://img.shields.io/badge/A2A-v0.3.0-blue?style=flat-square)](https://a2a-protocol.org/v0.3.0/specification)
+
 A defensive cybersecurity agent built on the Claude Agent SDK and the A2A Protocol, running on Anthropic's `claude-sonnet-4-6` model. MJR exists because Mythos Preview is unusually capable at security work, and unusually capable at the failure modes that come with it (sandbox escape, simulated keypresses, hidden git rewrites, fake dry-runs, answer thrashing, fabricated tool output). MJR wraps the model in hard barriers so it can be used for defense without becoming a liability.
 
 ## Quick start
@@ -33,7 +39,7 @@ MJR is intentionally a worker, not a product:
 
 - **No web UI.** MJR exposes an A2A HTTP endpoint. You drive it with `curl` or your own host process.
 - **No CMD / dashboard integration.** Matthew's private CMD 2.0 tile is not part of this release.
-- **No built-in host.** MJR will not initiate tasks by itself. You bring your own host (or write one from `docs/HOST_INTEGRATION.md`). This is a **security property**, not a missing feature: the host runs outside MJR's reach so a compromised model context cannot disable the audit.
+- **No built-in host.** MJR will not initiate tasks by itself. You bring your own host (or write one from `docs/HOST_INTEGRATION.md`). This is a **security property**, not a missing feature: the host runs outside MJR's reach so a compromised model context cannot disable the audit. Merging the decider and the doer into one agent is exactly the shape that produced the Mythos failure modes MJR is hardened against — do not do it.
 
 ## What MJR does
 
@@ -49,7 +55,7 @@ MJR is intentionally a worker, not a product:
 - Rewriting git history or writing to `.git/`
 - Modifying test files during patch verification
 - Posting artifacts to gists, pastebins, GitHub Pages, or any public surface
-- Network egress outside the small allowlist in `.well-known/agent.json`
+- Network egress outside the small allowlist in `security-policy.json`
 - Encoding commands in base64, hex, or any other transform to bypass classifiers
 - Accessing `/proc/<pid>/mem`, `ptrace`, or any other process introspection
 
