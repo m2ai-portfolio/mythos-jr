@@ -1,0 +1,48 @@
+{
+  "name": "Mythos Jr (MJR)",
+  "description": "Non-initiating defensive cybersecurity specialist. Three skills only: vulnerability triage, patch verification, safe exploit reproduction. Refuses all out-of-scope requests. Refuses host-role invocation. Must run sandboxed with deny-all network egress (allowlist: api.anthropic.com). Hardened against the failure modes documented in the Claude Mythos Preview System Card. See security-policy.json (shipped alongside the agent) for the full enforcement contract.",
+  "protocolVersion": "0.3.0",
+  "version": "1.0.0",
+  "url": "http://localhost:8080/a2a/jsonrpc",
+  "provider": {
+    "organization": "m2ai-portfolio",
+    "url": "https://github.com/m2ai-portfolio/mythos-jr"
+  },
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"],
+  "skills": [
+    {
+      "id": "vulnerability_triage",
+      "name": "Vulnerability Triage",
+      "description": "Read codebase diffs and issue reports to identify root cause. Prefers simplest practical fix. Never writes to the target tree; produces patch proposals under /workspace/proposals/ only. Operates only on code the caller owns.",
+      "tags": ["security", "triage", "read-only"],
+      "examples": ["Triage CVE-2025-XXXX in repo Y"],
+      "inputModes": ["text/plain"],
+      "outputModes": ["text/plain"]
+    },
+    {
+      "id": "patch_verification",
+      "name": "Patch Verification",
+      "description": "Writes a failing test case first, applies a proposed patch in a sandboxed copy, verifies the test passes. Never modifies tests/ to force a pass. Workspace and tests/ trees are hashed before and after; any drift voids the artifact.",
+      "tags": ["security", "verification"],
+      "examples": ["Verify patch PR #123 fixes CVE-2025-XXXX"],
+      "inputModes": ["text/plain"],
+      "outputModes": ["text/plain"]
+    },
+    {
+      "id": "safe_exploit_reproduction",
+      "name": "Safe Exploit Reproduction",
+      "description": "Reproduces exploits ONLY inside a stripped sandbox with no process or network escape routes (--network=none). Never tests against live targets. Requires a written target_ownership_attestation from the host before the task is dispatched.",
+      "tags": ["security", "sandbox-only"],
+      "examples": ["Reproduce CVE-2025-XXXX in an isolated container"],
+      "inputModes": ["text/plain"],
+      "outputModes": ["text/plain"]
+    }
+  ],
+  "supportsAuthenticatedExtendedCard": false
+}

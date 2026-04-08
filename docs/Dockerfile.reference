@@ -1,0 +1,43 @@
+# Mythos Jr — Reference Dockerfile (NOT the primary distribution)
+#
+# Primary install: npm install -g @m2ai/mythos-jr
+#
+# This Dockerfile is for advanced users who want container-level isolation
+# on top of host-process isolation. To run this container successfully,
+# you MUST mount your authenticated `claude` CLI credentials:
+#
+#   docker run --rm \
+#     -v ~/.claude:/home/mjr/.claude:ro \
+#     -p 127.0.0.1:8080:8080 \
+#     -p 127.0.0.1:9090:9090 \
+#     mythos-jr:reference
+#
+# Without an authenticated ~/.claude mount, MJR will boot but produce no
+# artifacts (the @anthropic-ai/claude-agent-sdk subprocess cannot auth).
+#
+# This is a reference only. It is NOT kept in sync with every npm release.
+
+FROM node:20-bookworm-slim AS build
+WORKDIR /app
+COPY package.json tsconfig.json ./
+RUN npm install
+COPY src ./src
+COPY system_prompt.md security-policy.json ./
+COPY .well-known ./.well-known
+RUN npm run build
+
+FROM node:20-bookworm-slim
+RUN useradd -u 10001 -r -s /usr/sbin/nologin mjr \
+ && mkdir -p /workspace /workspace/proposals /workspace/poc \
+ && chown -R mjr:mjr /workspace
+WORKDIR /app
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/system_prompt.md ./system_prompt.md
+COPY --from=build /app/security-policy.json ./security-policy.json
+COPY --from=build /app/.well-known ./.well-known
+USER mjr
+EXPOSE 8080 9090
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD ["node", "-e", "require('http').get('http://127.0.0.1:9090/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+ENTRYPOINT ["node", "dist/server.js"]
