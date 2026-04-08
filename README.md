@@ -6,6 +6,10 @@
 [![node](https://img.shields.io/node/v/@m2ai/mythos-jr?style=flat-square)](./package.json)
 [![A2A Protocol](https://img.shields.io/badge/A2A-v0.3.0-blue?style=flat-square)](https://a2a-protocol.org/v0.3.0/specification)
 
+<p align="center">
+  <img src="docs/assets/hero.jpg" alt="Mythos Jr" width="800" />
+</p>
+
 A defensive cybersecurity agent built on the Claude Agent SDK and the A2A Protocol, running on Anthropic's `claude-sonnet-4-6` model. MJR exists because Mythos Preview is unusually capable at security work, and unusually capable at the failure modes that come with it (sandbox escape, simulated keypresses, hidden git rewrites, fake dry-runs, answer thrashing, fabricated tool output). MJR wraps the model in hard barriers so it can be used for defense without becoming a liability.
 
 ## Quick start
@@ -26,6 +30,16 @@ MJR boots an A2A worker on `127.0.0.1:8080` (JSON-RPC + REST) and a liveness sid
 - **Node.js >= 20**
 - **Authenticated `claude` CLI** — `@anthropic-ai/claude-agent-sdk` spawns the `claude` CLI as a subprocess. Run `claude auth login` (or your Max OAuth equivalent) on the host before starting MJR. Without an authenticated CLI, MJR will boot but produce no artifacts.
 - **(Optional) Sandbox VM** for `safe_exploit_reproduction` — see "Not included" below.
+
+## Architecture
+
+<p align="center">
+  <img src="docs/assets/architecture.jpg" alt="MJR host/worker architecture — decider and doer split, hard barriers around the worker" width="800" />
+</p>
+
+MJR is a non-initiating worker. A separate host agent (you supply) holds decision authority but has no exec tools; MJR holds exec tools, the sandbox, and the refusal logic but zero decision authority. Merging the decider and the doer back into one process is exactly the architectural shape that produced the Mythos failure modes this project is hardened against — which is why MJR refuses host-role invocation at startup.
+
+The host/worker split is load-bearing on the safety argument, not a soft recommendation. See `docs/HOST_INTEGRATION.md` for how to build a compliant host agent, `host/host_checks.md` for the audit rules a host must enforce on every task dispatch, and `PLAN.md` for the full Mythos-lesson → mitigation table with system card citations.
 
 ## Distribution
 
