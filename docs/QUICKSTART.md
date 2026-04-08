@@ -38,7 +38,60 @@ MJR speaks A2A Protocol v0.3.0 via the official `@a2a-js/sdk` JS SDK. The agent 
 - `POST /a2a/jsonrpc` — JSON-RPC 2.0 over HTTP
 - `POST /a2a/rest` — REST-style A2A endpoints
 
-Example: ask MJR to triage a vulnerability via JSON-RPC `message/send`.
+### 2a. First-run test (copy-paste, no workspace required)
+
+This is the fastest way to verify your install actually works end-to-end. The task is a self-contained Python snippet embedded in the prompt — MJR reads the code out of the message and triages it in-place, no file mounts needed. This is the exact task used in MJR's own smoke test before v1.0.0 was released.
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/a2a/jsonrpc \
+  -H "Content-Type: application/json" \
+  --data-raw '{
+    "jsonrpc": "2.0",
+    "id": "smoke-1",
+    "method": "message/send",
+    "params": {
+      "message": {
+        "kind": "message",
+        "messageId": "msg-smoke-1",
+        "role": "user",
+        "parts": [{
+          "kind": "text",
+          "text": "Skill: vulnerability_triage. Identify the vulnerability in this Python function in ONE short paragraph. Do not write files or propose a fix.\n\ndef search(db, q):\n    return db.execute(f\"SELECT * FROM users WHERE name LIKE %{q}%\").fetchall()"
+        }],
+        "metadata": {"isHostInvocation": false, "skill": "vulnerability_triage"}
+      }
+    }
+  }'
+```
+
+Expected response (state, 1 artifact, verbatim from the v1.0.0 smoke test):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "smoke-1",
+  "result": {
+    "kind": "task",
+    "id": "<uuid>",
+    "contextId": "<uuid>",
+    "status": { "state": "completed", "timestamp": "..." },
+    "artifacts": [{
+      "artifactId": "<uuid>-artifact-0",
+      "name": "mjr-output",
+      "parts": [{
+        "kind": "text",
+        "text": "The function is vulnerable to **SQL injection**: the query parameter `q` is interpolated directly into the SQL string via an f-string, meaning an attacker can supply input like `%'"'"' OR '"'"'1'"'"'='"'"'1` to manipulate the query logic, exfiltrate arbitrary rows, or — depending on the database driver — chain additional statements to drop tables, read other tables, or bypass authentication entirely. No sanitization, parameterization, or escaping is applied before the value reaches the database engine."
+      }]
+    }]
+  }
+}
+```
+
+Round trip is typically 8-15 seconds on a healthy Max OAuth session. Audit log events you should see during the call: `task_start → stream_message (system) → stream_message (assistant) → stream_message (result) → task_complete`. If you see `task_start → task_complete` with **no** `assistant` events in between, your `claude` CLI is not authenticated — MJR will have published `state: failed` with a message telling you to check auth. Re-run `claude auth login` and try again.
+
+### 2b. Production shape (workspace-mounted codebase)
+
+A more realistic task: point MJR at a read-only codebase mount and ask it to triage a real vulnerability. You (or your host agent) supply the workspace path.
 
 ```bash
 curl -N -X POST http://127.0.0.1:8080/a2a/jsonrpc \

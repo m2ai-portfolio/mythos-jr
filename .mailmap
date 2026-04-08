@@ -1,0 +1,10 @@
+# Canonical identity mapping for git tooling.
+# Rewrites the display name + email of past commits without rewriting history.
+# See: https://git-scm.com/docs/gitmailmap
+#
+# Normalizes to: Matthew Snow <matthew@memyselfplusai.com>
+# Covers:
+#   - pre-2026-04-07 commits that used the gmail identity
+#   - transitional commits made after the email swap but before the name swap
+Matthew Snow <matthew@memyselfplusai.com> matthewsnow2 <matthew.snow2@gmail.com>
+Matthew Snow <matthew@memyselfplusai.com> matthewsnow2 <matthew@memyselfplusai.com>

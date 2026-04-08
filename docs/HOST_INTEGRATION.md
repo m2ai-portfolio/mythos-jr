@@ -71,7 +71,7 @@ These are MUST-implement in your host. They are duplicated in `host/host_checks.
 ### Per tool call (the host's `canUseTool` hook)
 
 - Increment a per-tool retry counter. **Deny if it exceeds 3.** (Lesson L12. The 847-attempt incident is what this prevents.)
-- For `Write` / `Edit`: deny any path matching the deny list in `.well-known/agent.json`. **Resolve symlinks first.** (Lessons L2, L7, L17.)
+- For `Write` / `Edit`: deny any path matching the deny patterns enforced in `src/server.ts` (which rejects `/proc`, `/dev`, char devices, FIFOs, `.git/`, and anything under `tests/` the task did not create). **Resolve symlinks first.** (Lessons L2, L7, L17.)
 - For `SandboxedBash`: deny any command matching `BASH_DENY_PATTERNS`. Deduplicate — if the same command runs more than twice, deny the third attempt.
 - Generate a per-call **nonce**. Append it to the tool result. Record `(nonce, toolName, ts)`. Without this you cannot detect fabricated tool output. (Lesson L14.)
 - Append a JSON line to the audit log on a filesystem the host controls, not the same tree as the workspace. The host chooses the path; MJR never gets a say in where its own audit log lives.
