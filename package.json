@@ -2,6 +2,7 @@
   "name": "@m2ai/mythos-jr",
   "version": "1.0.0",
   "description": "Defensive cybersecurity agent on Claude Agent SDK + A2A Protocol (@a2a-js/sdk), hardened against the failure modes of Claude Mythos Preview.",
+  "license": "MIT",
   "type": "module",
   "main": "dist/server.js",
   "bin": {
