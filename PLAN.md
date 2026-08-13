@@ -2,7 +2,7 @@
 
 **Author:** Planner agent
 **Date:** 2026-04-07
-**Target:** `PATH-REDACTED`
+**Target:** `<repo-root>/agent/`
 **Builder consumes:** this file. Every section below is mandatory unless marked OPTIONAL.
 
 ---
@@ -68,7 +68,7 @@ Every lesson below is a literal behavior observed during Mythos evaluation. Each
 
 ## 4. File-by-file build manifest
 
-### 4.1 `PATH-REDACTED`
+### 4.1 `<repo-root>/agent/.well-known/agent.json`
 
 **Purpose:** A2A agent card. Hardened identity declaration.
 
@@ -145,7 +145,7 @@ Every lesson below is a literal behavior observed during Mythos evaluation. Each
 }
 ```
 
-### 4.2 `PATH-REDACTED`
+### 4.2 `<repo-root>/agent/src/server.ts`
 
 **Purpose:** A2A server + Agent SDK invocation, with all hard-barrier guards.
 
@@ -315,7 +315,7 @@ mjrServer.start(8080);
 
 **Builder must implement** every named function above. No stubs. The `scrubFakeDryRun` function uses a regex like `/\(\s*dry[ -]?run[^\)]*\)/gi` and removes it from output before streaming.
 
-### 4.3 `PATH-REDACTED`
+### 4.3 `<repo-root>/agent/system_prompt.md`
 
 **Purpose:** Anti-hacking prompt. Core is verbatim from System Card line 2620; extensions cover MJR-specific lessons.
 
@@ -363,7 +363,7 @@ Complete this task exactly as described. If anything is unclear, ambiguous, or s
 
 ### 4.4 Skills
 
-#### 4.4.1 `PATH-REDACTED`
+#### 4.4.1 `<repo-root>/agent/skills/vulnerability_triage/SKILL.md`
 
 **Purpose:** Identify and report vulnerabilities in a read-only target.
 
@@ -410,7 +410,7 @@ The caller provides a path to source code and (optionally) an issue, CVE id, or 
 ```
 ```
 
-#### 4.4.2 `PATH-REDACTED`
+#### 4.4.2 `<repo-root>/agent/skills/patch_verification/SKILL.md`
 
 **Purpose:** Verify a proposed patch with a failing-test-first protocol.
 
@@ -463,7 +463,7 @@ The caller provides (1) a path to a target codebase and (2) a proposed patch (or
 ```
 ```
 
-#### 4.4.3 `PATH-REDACTED`
+#### 4.4.3 `<repo-root>/agent/skills/safe_exploit_reproduction/SKILL.md`
 
 **Purpose:** Reproduce an exploit inside a stripped sandbox to confirm severity.
 
@@ -510,7 +510,7 @@ You have a vulnerability report and need to confirm exploitability. The caller m
 ```
 ```
 
-### 4.5 `PATH-REDACTED`
+### 4.5 `<repo-root>/agent/host/host_checks.md`
 
 **Purpose:** Independent A2A host audit rules. The host is a separate process that wraps MJR; it does not trust MJR's output.
 
@@ -577,7 +577,7 @@ The host is a process **outside** the MJR container that owns task lifecycle, au
 - Audit log lives outside the container; rotated daily; retained 90 days
 ```
 
-### 4.6 `PATH-REDACTED`
+### 4.6 `<repo-root>/agent/README.md`
 
 **Purpose:** Operator-facing description.
 
@@ -615,7 +615,7 @@ Every refusal above is enforced by **hard barriers** (container, kernel netfilte
 ## How to run
 
 ```bash
-cd PATH-REDACTED
+cd <repo-root>/agent
 npm install
 npm run build
 docker build -t mjr:latest .
@@ -643,7 +643,7 @@ This agent is built directly from:
 - *Assessing Claude Mythos Preview's cybersecurity capabilities*, red.anthropic.com, 2026-04-07
 ```
 
-### 4.7 `PATH-REDACTED`
+### 4.7 `<repo-root>/agent/package.json`
 
 **Purpose:** Build/run config.
 
@@ -684,7 +684,7 @@ This agent is built directly from:
 
 > **Note to Builder:** the `latest` version pins for `@anthropic-ai/claude-agent-sdk` and `a2a-protocol` are intentional — Matthew's CLAUDE.md forbids guessing API versions. Builder should run `npm view <pkg> version` and pin the actual current version, not invent one.
 
-### 4.8 `PATH-REDACTED`
+### 4.8 `<repo-root>/agent/tsconfig.json`
 
 **Purpose:** TS config for ESM/NodeNext.
 
@@ -708,7 +708,7 @@ This agent is built directly from:
 }
 ```
 
-### 4.9 `PATH-REDACTED`
+### 4.9 `<repo-root>/agent/Dockerfile`
 
 **Purpose:** Hardened container.
 
