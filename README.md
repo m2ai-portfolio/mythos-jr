@@ -25,6 +25,8 @@ mythos-jr --port 8080
 
 MJR boots an A2A worker on `127.0.0.1:8080` (JSON-RPC + REST) and a liveness sidecar on `127.0.0.1:9090`. See **[docs/QUICKSTART.md](docs/QUICKSTART.md)** for a working `curl` example, how to tail the audit log, and how to stop.
 
+Both listeners bind to `127.0.0.1` unless you pass `--host`. The A2A endpoint has no authentication, so only widen it behind a firewall or inside a container network. `Write` and `Edit` are confined to the directory given by `--workspace` (default `/workspace`); on a machine without that directory every write is refused until you point `--workspace` at a real folder.
+
 ## Requirements
 
 - **Node.js >= 20**

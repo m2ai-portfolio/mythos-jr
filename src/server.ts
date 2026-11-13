@@ -166,16 +166,32 @@ function checkBash(cmd: string): { allow: boolean; reason?: string } {
   return { allow: true };
 }
 
+// Workspace root for the Write/Edit path guard. Set once in startServer() from
+// --workspace (default /workspace, the path the Docker reference mounts).
+let workspaceRoot = "/workspace";
+
+// Resolve symlinks on the deepest ancestor that exists, then re-attach the rest,
+// so a new file under a symlinked directory is judged by where it would land.
+function resolveReal(p: string): string {
+  let current = path.resolve(p);
+  const rest: string[] = [];
+  for (;;) {
+    try {
+      return path.join(fs.realpathSync(current), ...rest);
+    } catch {
+      const parent = path.dirname(current);
+      if (parent === current) return path.resolve(p);
+      rest.unshift(path.basename(current));
+      current = parent;
+    }
+  }
+}
+
 function checkPath(p: string): { allow: boolean; reason?: string } {
   if (!p) return { allow: false, reason: "empty path" };
-  let resolved: string;
-  try {
-    // Resolve symlinks first when the path exists, otherwise fall back to logical resolve.
-    resolved = fs.existsSync(p) ? fs.realpathSync(p) : path.resolve(p);
-  } catch {
-    resolved = path.resolve(p);
-  }
-  if (!resolved.startsWith("/workspace")) {
+  const resolved = resolveReal(p);
+  // Exact root or a child of it. A bare startsWith() also matched /workspace-evil.
+  if (resolved !== workspaceRoot && !resolved.startsWith(workspaceRoot + path.sep)) {
     return { allow: false, reason: "outside workspace" };
   }
   for (const re of PATH_DENY_PATTERNS) {
@@ -292,11 +308,8 @@ async function canUseTool(
   }
 
   // L14: tag every other allowed call with a nonce too.
-  const nonce = registerNonce(toolName);
-  return {
-    behavior: "allow",
-    updatedInput: { ...input, mjr_nonce: `mjr-nonce-${nonce}` },
-  };
+  registerNonce(toolName);
+  return { behavior: "allow", updatedInput: input };
 }
 
 // ---------------------------------------------------------------------------
@@ -444,7 +457,13 @@ class MjrExecutor implements AgentExecutor {
         options: {
           model: "claude-sonnet-4-6",
           systemPrompt: SYSTEM_PROMPT,
-          allowedTools: ["Read", "Write", "Edit", "SandboxedPython", "SandboxedBash"],
+          // Nothing is pre-approved. The Agent SDK does not call canUseTool for
+          // tools listed in allowedTools, so listing Read/Write/Edit here skipped
+          // the retry cap and the path guard (measured on SDK 0.2.94).
+          allowedTools: [],
+          // Never load user, project or local Claude Code settings: their permission
+          // rules could pre-approve tools behind the checkpoint.
+          settingSources: [],
           disallowedTools: ["WebFetch", "WebSearch", "Bash"], // L1, L10, L20 — native Bash forbidden
           permissionMode: "default",                            // L5
           maxTurns: MAX_TURNS,                                  // L12
@@ -566,6 +585,10 @@ class MjrExecutor implements AgentExecutor {
 export interface StartServerConfig {
   port: number;
   healthPort: number;
+  /** Interface to bind both listeners to. Default 127.0.0.1. */
+  host?: string;
+  /** Root directory Write/Edit are confined to. Default /workspace. */
+  workspaceRoot?: string;
   policyPath: string;
   auditLogPath: string;
 }
@@ -636,8 +659,10 @@ export async function startServer(config: StartServerConfig): Promise<void> {
     { level: "info" },
     pino.destination({ dest: config.auditLogPath, sync: false, mkdir: true }),
   );
+  workspaceRoot = resolveReal(config.workspaceRoot ?? "/workspace");
   auditLogger.info({
     event: "server_boot",
+    workspaceRoot,
     policyPath: config.policyPath,
     auditLogPath: config.auditLogPath,
   });
@@ -656,8 +681,9 @@ export async function startServer(config: StartServerConfig): Promise<void> {
   app.use("/a2a/jsonrpc", jsonRpcHandler({ requestHandler, userBuilder: UserBuilder.noAuthentication }));
   app.use("/a2a/rest", restHandler({ requestHandler, userBuilder: UserBuilder.noAuthentication }));
 
-  app.listen(config.port, () => {
-    auditLogger.info({ event: "server_listen", port: config.port });
+  const host = config.host ?? "127.0.0.1";
+  app.listen(config.port, host, () => {
+    auditLogger.info({ event: "server_listen", host, port: config.port });
   });
 
   // ---- Liveness probe — sidecar HTTP server on healthPort. -------------------
@@ -674,7 +700,7 @@ export async function startServer(config: StartServerConfig): Promise<void> {
     res.writeHead(404, { "Content-Type": "text/plain" });
     res.end("not found");
   });
-  healthServer.listen(config.healthPort);
+  healthServer.listen(config.healthPort, host);
 }
 
 // Exported for tests / host audit reuse — no runtime effect.

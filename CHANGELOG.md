@@ -5,6 +5,23 @@ All notable changes to Mythos Jr (MJR) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Tool checkpoint was skipped for Read, Write and Edit.** They were listed in `allowedTools`, and the Agent SDK does not call `canUseTool` for pre-approved tools. Measured on the pinned SDK 0.2.94: a write outside `/workspace` succeeded with zero `tool_attempt` lines. `allowedTools` is now empty, so the retry cap and the path guard run.
+- **Path guard boundary.** `startsWith("/workspace")` also accepted `/workspace-evil/...`. The guard now requires the root itself or a child of it, and resolves symlinks on the nearest existing parent for files that do not exist yet.
+- **Listeners bound to every interface** with no authentication, while the README said `127.0.0.1`. Both now bind to `127.0.0.1` by default.
+- `canUseTool` no longer adds an `mjr_nonce` key to the input of built-in tools.
+- `docs/Dockerfile.reference` entrypoint pointed at `dist/server.js`, which starts nothing. It now runs `dist/cli.js --host 0.0.0.0` (not rebuilt or run for this change).
+
+### Added
+- `--host ADDR` (default `127.0.0.1`) and `--workspace DIR` (default `/workspace`).
+- `settingSources: []` on the SDK query, so user, project and local Claude Code settings cannot pre-approve tools.
+
+### Known, unchanged
+- `Read` has no path guard. Reads inside the working directory are not sent to `canUseTool` at all.
+- Still no test suite. The fixes above were checked with one live task (one write inside the workspace allowed, two outside refused and logged).
+
 ## [1.0.0] - 2026-04-07
 
 Initial release. Non-initiating defensive cybersecurity worker agent derived from lessons documented in the Claude Mythos Preview System Card (2026-04-07).
