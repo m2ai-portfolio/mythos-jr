@@ -10,6 +10,8 @@ const VERSION = "1.0.0";
 interface CliArgs {
   port: number;
   healthPort: number;
+  host: string;
+  workspace: string;
   policy: string;
   auditLog: string;
   help: boolean;
@@ -22,6 +24,8 @@ function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
     port: 8080,
     healthPort: 9090,
+    host: "127.0.0.1",
+    workspace: "/workspace",
     policy: defaultPolicy,
     auditLog: path.resolve(process.cwd(), "mjr-audit.log"),
     help: false,
@@ -35,6 +39,12 @@ function parseArgs(argv: string[]): CliArgs {
         break;
       case "--health-port":
         args.healthPort = Number(argv[++i]);
+        break;
+      case "--host":
+        args.host = String(argv[++i]);
+        break;
+      case "--workspace":
+        args.workspace = path.resolve(argv[++i]);
         break;
       case "--policy":
         args.policy = path.resolve(argv[++i]);
@@ -62,11 +72,13 @@ function printHelp(): void {
   console.log(`mythos-jr v${VERSION}
 
 Usage:
-  mythos-jr [--port N] [--health-port N] [--policy PATH] [--audit-log PATH]
+  mythos-jr [--port N] [--health-port N] [--host ADDR] [--workspace DIR] [--policy PATH] [--audit-log PATH]
 
 Options:
   --port N          A2A listener port (default 8080)
   --health-port N   Liveness sidecar port (default 9090)
+  --host ADDR       Interface to listen on (default 127.0.0.1; the A2A endpoint has no authentication)
+  --workspace DIR   Only directory Write and Edit may touch (default /workspace)
   --policy PATH     security-policy.json (default: package copy)
   --audit-log PATH  Append-only audit log (default ./mjr-audit.log)
   -h, --help        Show this help
@@ -100,6 +112,8 @@ async function main(): Promise<void> {
     await startServer({
       port: args.port,
       healthPort: args.healthPort,
+      host: args.host,
+      workspaceRoot: args.workspace,
       policyPath: args.policy,
       auditLogPath: args.auditLog,
     });

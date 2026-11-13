@@ -40,4 +40,6 @@ USER mjr
 EXPOSE 8080 9090
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD ["node", "-e", "require('http').get('http://127.0.0.1:9090/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
-ENTRYPOINT ["node", "dist/server.js"]
+# The CLI binds to 127.0.0.1 by default; inside a container it must listen on
+# 0.0.0.0 for a published port to reach it. Keep the published port private.
+ENTRYPOINT ["node", "dist/cli.js", "--host", "0.0.0.0"]
