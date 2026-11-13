@@ -4,16 +4,16 @@
 #
 # This Dockerfile is for advanced users who want container-level isolation
 # on top of host-process isolation. To run this container successfully,
-# you MUST mount your authenticated `claude` CLI credentials:
+# you MUST pass an Anthropic API key in the environment:
 #
 #   docker run --rm \
-#     -v ~/.claude:/home/mjr/.claude:ro \
+#     -e ANTHROPIC_API_KEY \
 #     -p 127.0.0.1:8080:8080 \
 #     -p 127.0.0.1:9090:9090 \
 #     mythos-jr:reference
 #
-# Without an authenticated ~/.claude mount, MJR will boot but produce no
-# artifacts (the @anthropic-ai/claude-agent-sdk subprocess cannot auth).
+# Without a valid ANTHROPIC_API_KEY, MJR will boot but every task fails
+# (the @anthropic-ai/claude-agent-sdk subprocess cannot authenticate).
 #
 # This is a reference only. It is NOT kept in sync with every npm release.
 

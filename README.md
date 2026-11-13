@@ -28,7 +28,14 @@ MJR boots an A2A worker on `127.0.0.1:8080` (JSON-RPC + REST) and a liveness sid
 ## Requirements
 
 - **Node.js >= 20**
-- **Authenticated `claude` CLI** — `@anthropic-ai/claude-agent-sdk` spawns the `claude` CLI as a subprocess. Run `claude auth login` (or your Max OAuth equivalent) on the host before starting MJR. Without an authenticated CLI, MJR will boot but produce no artifacts.
+- **An Anthropic API key.** MJR runs on `@anthropic-ai/claude-agent-sdk`, which starts Claude Code as a subprocess and reads `ANTHROPIC_API_KEY` from the environment. Create a key in the [Claude Console](https://platform.claude.com/) and set it in the shell that starts MJR:
+
+  ```bash
+  export ANTHROPIC_API_KEY=your-api-key        # Linux / macOS
+  $env:ANTHROPIC_API_KEY = "your-api-key"      # Windows PowerShell
+  ```
+
+  Every task is billed to that key. Anthropic's [Agent SDK documentation](https://code.claude.com/docs/en/agent-sdk/overview) says agents built on the SDK must use API key authentication, not a claude.ai login, unless Anthropic has approved otherwise. Without a valid key MJR still boots, but the first task comes back with `"state": "failed"` and the message `Invalid API key` or `Not logged in`.
 - **(Optional) Sandbox VM** for `safe_exploit_reproduction` — see "Not included" below.
 
 ## Architecture

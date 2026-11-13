@@ -51,7 +51,7 @@ MJR's hardening is real but incomplete without host-side enforcement. If you run
 3. **Enforcing the egress allowlist** at the host firewall or network namespace level. MJR declares the allowlist in `security-policy.json`; it does not configure your firewall for you.
 4. **Running MJR inside a VM or network-less container for `safe_exploit_reproduction`** tasks. MJR is a host process, not a sandbox.
 5. **Implementing the host audit rules in `host/host_checks.md`** — retry cap enforcement, `.git` protection, dry-run probes, subagent permission inheritance. These run *outside* MJR because anything inside MJR's process can theoretically be subverted by the model.
-6. **Keeping the `claude` CLI authenticated** as the user MJR runs under. A compromised auth token compromises MJR.
+6. **Protecting the `ANTHROPIC_API_KEY`** in the environment MJR runs under. A leaked key lets anyone spend against your account, and anyone who can reach MJR's port can spend it through MJR.
 
 ## The one thing you must never do
 

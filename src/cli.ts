@@ -74,7 +74,7 @@ Options:
 
 Mythos Jr is a non-initiating defensive cybersec worker. Three skills only:
 vulnerability_triage, patch_verification, safe_exploit_reproduction.
-Requires an authenticated \`claude\` CLI on the host.`);
+Requires ANTHROPIC_API_KEY in the environment.`);
 }
 
 async function main(): Promise<void> {

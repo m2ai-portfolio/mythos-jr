@@ -5,7 +5,7 @@ This guide shows how to run MJR as a host-process worker and dispatch a task to 
 ## 0. Prerequisites
 
 - **Node.js >= 20**
-- **Authenticated `claude` CLI.** `@anthropic-ai/claude-agent-sdk` spawns the `claude` CLI as a subprocess — it needs an authenticated CLI on the host, not an API key in the environment. Run `claude auth login` (or your Max OAuth equivalent) and confirm `claude --version` works before starting MJR.
+- **An Anthropic API key.** `@anthropic-ai/claude-agent-sdk` starts Claude Code as a subprocess and reads `ANTHROPIC_API_KEY` from the environment. Create a key in the [Claude Console](https://platform.claude.com/), then set it in the same shell that starts MJR: `export ANTHROPIC_API_KEY=your-api-key` (Linux / macOS) or `$env:ANTHROPIC_API_KEY = "your-api-key"` (Windows PowerShell). Every task is billed to that key. Anthropic's [Agent SDK documentation](https://code.claude.com/docs/en/agent-sdk/overview) says agents built on the SDK must use API key authentication, not a claude.ai login, unless Anthropic has approved otherwise.
 
 ## 1. Run MJR
 
@@ -87,7 +87,7 @@ Expected response (state, 1 artifact, verbatim from the v1.0.0 smoke test):
 }
 ```
 
-Round trip is typically 8-15 seconds on a healthy Max OAuth session. Audit log events you should see during the call: `task_start → stream_message (system) → stream_message (assistant) → stream_message (result) → task_complete`. If you see `task_start → task_complete` with **no** `assistant` events in between, your `claude` CLI is not authenticated — MJR will have published `state: failed` with a message telling you to check auth. Re-run `claude auth login` and try again.
+Round trip is typically 8-15 seconds. Audit log events you should see during the call: `task_start → stream_message (system) → stream_message (assistant) → stream_message (result) → task_complete`. If the task comes back with `state: failed` and the message `Invalid API key` or `Not logged in`, the key is wrong or missing: set `ANTHROPIC_API_KEY` in the shell that starts MJR, restart MJR, and try again.
 
 ### 2b. Production shape (workspace-mounted codebase)
 
@@ -127,7 +127,7 @@ The `-N` flag disables curl buffering. The response is a JSON-RPC envelope whose
 
 If MJR refuses (e.g. host invocation), the terminal status has `state: "failed"` and a message part explaining the refusal reason.
 
-**Silent-success guard**: if MJR's upstream stream yields zero artifacts (usually an auth failure — the `claude` CLI subprocess could not authenticate), MJR publishes `failed` with a message telling you to check the audit log, instead of publishing a misleading `completed`. MJR does not silently succeed.
+**Silent-success guard**: if MJR's upstream stream yields zero artifacts (usually an upstream stream error, sometimes a missing or invalid `ANTHROPIC_API_KEY`), MJR publishes `failed` with a message telling you to check the audit log, instead of publishing a misleading `completed`. MJR does not silently succeed.
 
 ## 3. Read the audit log
 
