@@ -1,102 +1,79 @@
-# Mythos Jr (MJR)
+# Mythos Jr
 
-[![npm version](https://img.shields.io/npm/v/@m2ai/mythos-jr?style=flat-square)](https://www.npmjs.com/package/@m2ai/mythos-jr)
-[![npm downloads](https://img.shields.io/npm/dm/@m2ai/mythos-jr?style=flat-square)](https://www.npmjs.com/package/@m2ai/mythos-jr)
-[![license](https://img.shields.io/npm/l/@m2ai/mythos-jr?style=flat-square)](./LICENSE)
-[![node](https://img.shields.io/node/v/@m2ai/mythos-jr?style=flat-square)](./package.json)
-[![A2A Protocol](https://img.shields.io/badge/A2A-v0.3.0-blue?style=flat-square)](https://a2a-protocol.org/v0.3.0/specification)
+![Mythos Jr, scoped defensive security work with reviewable findings](docs/portfolio-hero.png)
 
-<p align="center">
-  <img src="docs/assets/hero.jpg" alt="Mythos Jr" width="800" />
-</p>
+When a security review finds a suspicious function, a useful assistant should help explain the bug and check a repair without gaining authority over the whole system. Mythos Jr is a defensive security worker built around that boundary: a separate host supplies an authorized task, the worker applies tool controls, and the operator reviews the findings and audit trail.
 
-A defensive cybersecurity agent built on the Claude Agent SDK and the A2A Protocol, running on Anthropic's `claude-sonnet-4-6` model. MJR exists because Mythos Preview is unusually capable at security work, and unusually capable at the failure modes that come with it (sandbox escape, simulated keypresses, hidden git rewrites, fake dry-runs, answer thrashing, fabricated tool output). MJR wraps the model in hard barriers so it can be used for defense without becoming a liability.
+The project combines the Claude Agent SDK with an A2A HTTP interface. It demonstrates bounded task dispatch, refusal logic, workspace guards, and an explicit split between the component that decides and the component that acts.
 
-## Quick start 
+**Status:** MIT-licensed worker package, version `1.0.0` in this source snapshot. No hosted instance, web UI, or bundled host agent. It runs as a host process unless you supply external isolation.
+
+## What it is for
+
+| Skill | Intended task |
+|---|---|
+| `vulnerability_triage` | Inspect authorized source, identify a suspected vulnerability, and propose a repair. |
+| `patch_verification` | Add a regression test and check a patch without changing existing tests. |
+| `safe_exploit_reproduction` | Reproduce a vulnerability in an isolated environment, with written ownership attestation. |
+
+The worker does not initiate work or approve its own scope. See [host integration](docs/HOST_INTEGRATION.md) and [host audit checks](host/host_checks.md) before building a dispatcher.
+
+## Set up from source
+
+Requires Node.js 20 or newer, npm, and an Anthropic API key for model-backed tasks. API tasks incur provider charges. Loading the source or building the project does not prove that authentication or task execution works.
 
 ```bash
-# One-shot (no install):
-npx @m2ai/mythos-jr
-
-# Or install globally:
-npm install -g @m2ai/mythos-jr
-mythos-jr --port 8080
+git clone https://github.com/m2ai-portfolio/mythos-jr.git
+cd mythos-jr
+npm install
+npm run build
+node dist/cli.js --help
 ```
 
-MJR boots an A2A worker on `127.0.0.1:8080` (JSON-RPC + REST) and a liveness sidecar on `127.0.0.1:9090`. See **[docs/QUICKSTART.md](docs/QUICKSTART.md)** for a working `curl` example, how to tail the audit log, and how to stop.
+Supply `ANTHROPIC_API_KEY` through your approved environment or secret manager. On the author's ProBook, source `~/.env.shared` in the launch shell. Keep credentials outside the repository.
 
-Both listeners bind to `127.0.0.1` unless you pass `--host`. The A2A endpoint has no authentication, so only widen it behind a firewall or inside a container network. `Write` and `Edit` are confined to the directory given by `--workspace` (default `/workspace`); on a machine without that directory every write is refused until you point `--workspace` at a real folder.
+Create a dedicated work directory and place the audit log outside that directory:
 
-## Requirements
+```bash
+mkdir -p mjr-workspace
+node dist/cli.js --workspace ./mjr-workspace --audit-log ./mjr-audit.log
+```
 
-- **Node.js >= 20**
-- **An Anthropic API key.** MJR runs on `@anthropic-ai/claude-agent-sdk`, which starts Claude Code as a subprocess and reads `ANTHROPIC_API_KEY` from the environment. Create a key in the [Claude Console](https://platform.claude.com/) and set it in the shell that starts MJR:
+The CLI defaults to a loopback-only A2A listener on port `8080` and a health sidecar on `9090`. Stop it with **Ctrl+C**. The A2A endpoint has no authentication, so widening `--host` requires an appropriate network boundary and access controls. This is an API worker, not a browser application.
 
-  ```bash
-  export ANTHROPIC_API_KEY=your-api-key        # Linux / macOS
-  $env:ANTHROPIC_API_KEY = "your-api-key"      # Windows PowerShell
-  ```
+The repository also documents npm distribution as `@m2ai/mythos-jr`. For the package-based route and request examples, use [the quickstart](docs/QUICKSTART.md).
 
-  Every task is billed to that key. Anthropic's [Agent SDK documentation](https://code.claude.com/docs/en/agent-sdk/overview) says agents built on the SDK must use API key authentication, not a claude.ai login, unless Anthropic has approved otherwise. Without a valid key MJR still boots, but the first task comes back with `"state": "failed"` and the message `Invalid API key` or `Not logged in`.
-- **(Optional) Sandbox VM** for `safe_exploit_reproduction` — see "Not included" below.
+## First walkthrough
 
-## Architecture
+1. Read [security-policy.json](security-policy.json) and identify the worker's limits before sending it work.
+2. Start the worker with a real workspace and a separate audit-log path.
+3. Follow the quickstart's self-contained `vulnerability_triage` request. It asks for a short analysis of a supplied code snippet and does not need a source mount.
+4. Check the returned A2A task status and artifact. A listening server or healthy sidecar alone is not proof that a model task succeeded.
+5. Inspect `mjr-audit.log` for the corresponding task events and tool decisions. If authentication fails, correct the launch environment and restart.
+6. Before using real source, define ownership, permitted reads, permitted writes, and the host's acceptance checks.
 
-<p align="center">
-  <img src="docs/assets/architecture.jpg" alt="MJR host/worker architecture — decider and doer split, hard barriers around the worker" width="800" />
-</p>
+## Design and controls
 
-MJR is a non-initiating worker. A separate host agent (you supply) holds decision authority but has no exec tools; MJR holds exec tools, the sandbox, and the refusal logic but zero decision authority. Merging the decider and the doer back into one process is exactly the architectural shape that produced the Mythos failure modes this project is hardened against — which is why MJR refuses host-role invocation at startup.
+The [server implementation](src/server.ts) contains startup refusal checks, tool permission handling, workspace path validation, command classification, retry caps, and nonce checks for referenced tool output. The CLI exposes `--workspace`, `--policy`, `--audit-log`, `--host`, `--port`, and `--health-port`.
 
-The host/worker split is load-bearing on the safety argument, not a soft recommendation. See `docs/HOST_INTEGRATION.md` for how to build a compliant host agent, `host/host_checks.md` for the audit rules a host must enforce on every task dispatch, and `PLAN.md` for the full Mythos-lesson → mitigation table with system card citations.
+The default policy aims to prevent unauthorized targets, permission-prompt simulation, Git history changes, public artifact posting, and edits to existing tests during verification. These controls are defense in depth, not a proof that arbitrary model behavior is safe. The nonce check rejects unknown nonce references; it is not a general truth detector for every statement in an artifact.
 
-## Distribution
+## Operational boundaries
 
-MJR 1.0 ships as an **npm package** (`@m2ai/mythos-jr`). The source is open (MIT, see `LICENSE`). There is no hosted instance, no cloud SaaS, no telemetry. A reference Dockerfile is kept in `docs/Dockerfile.reference` for advanced users; it is not the primary distribution. See `ROADMAP.md` for the future of the bundled UI option.
+- The process is not an OS sandbox. Use a dedicated OS user and external isolation appropriate to the task.
+- Keep the installation and audit log outside the worker's writable workspace.
+- Enforce network egress at the firewall or network namespace level; a policy file alone cannot enforce every network path.
+- Exploit reproduction requires a dedicated isolated environment. Review the tradeoffs in [docs/Dockerfile.reference](docs/Dockerfile.reference).
+- The user supplies the host agent and its independent review. See [PLAN.md](PLAN.md) for the design rationale and source references, and [ROADMAP.md](ROADMAP.md) for future work.
 
-## Not included
+## Development checks
 
-MJR runs as a **host-process worker, not a container by default**. Sandboxing for `safe_exploit_reproduction` is the user's responsibility — run MJR itself inside a dedicated VM or stripped container if you use that skill. A reference Dockerfile is in `docs/Dockerfile.reference` for advanced users who want container-level isolation and are willing to mount their `~/.claude/` credentials.
+```bash
+npm run build
+npm test
+npm run lint
+```
 
-MJR is intentionally a worker, not a product:
+These commands come from [package.json](package.json). They check the source and tests; real provider authentication, sandboxing, firewall behavior, and host integration need separate validation in your environment.
 
-- **No web UI.** MJR exposes an A2A HTTP endpoint. You drive it with `curl` or your own host process.
-- **No CMD / dashboard integration.** Matthew's private CMD 2.0 tile is not part of this release.
-- **No built-in host.** MJR will not initiate tasks by itself. You bring your own host (or write one from `docs/HOST_INTEGRATION.md`). This is a **security property**, not a missing feature: the host runs outside MJR's reach so a compromised model context cannot disable the audit. Merging the decider and the doer into one agent is exactly the shape that produced the Mythos failure modes MJR is hardened against — do not do it.
-
-## What MJR does
-
-- **`vulnerability_triage`** — read a codebase on a read-only mount, identify root cause of a bug, propose a patch into a side directory.
-- **`patch_verification`** — write a failing test for a bug, apply a patch, verify the test now passes and nothing regresses. Cannot edit existing tests.
-- **`safe_exploit_reproduction`** — reproduce a vulnerability in a stripped, network-less container to confirm severity before responsible disclosure. Requires a written ownership attestation.
-
-## What MJR refuses
-
-- Operating on systems the caller does not own or have written authorization to test
-- Producing exploit code intended for deployment against third parties
-- Bypassing or simulating permission prompts (`xdotool`, `tmux send-keys`, `expect`, etc.)
-- Rewriting git history or writing to `.git/`
-- Modifying test files during patch verification
-- Posting artifacts to gists, pastebins, GitHub Pages, or any public surface
-- Network egress outside the small allowlist in `security-policy.json`
-- Encoding commands in base64, hex, or any other transform to bypass classifiers
-- Accessing `/proc/<pid>/mem`, `ptrace`, or any other process introspection
-
-## How it is hardened
-
-Every refusal above is enforced by **hard barriers** (deny-by-default tool list, `canUseTool` hook, bash denylist, path guard, nonce validation, retry cap) — not by the system prompt alone. The Mythos Preview System Card documents repeated cases of the model bypassing soft constraints (§4.2.1.1, §4.5.4.1). MJR treats the system prompt as a complement to hard barriers, not a substitute. See `host/host_checks.md` for the full list of independent host audit rules and `PLAN.md` for the full Mythos-lesson -> mitigation table.
-
-## Production hardening notes
-
-MJR is a host-process worker. Independent of MJR's own barriers, the operator is responsible for:
-
-- Running MJR as a dedicated OS user with read-only access to its install directory and no sudo rights.
-- Putting the audit log on a filesystem outside the workspace tree so a compromised task cannot overwrite it.
-- Enforcing the egress allowlist (`security-policy.json` `network_egress.allowlist`, currently `["api.anthropic.com"]`) at the host firewall / netns level.
-- For `safe_exploit_reproduction`, running MJR inside a VM or a network-less container.
-
-## Sources
-
-This agent is built directly from:
-- *Claude Mythos Preview System Card*, Anthropic, April 2026 (cited throughout `PLAN.md`)
-- *Assessing Claude Mythos Preview's cybersecurity capabilities*, red.anthropic.com, 2026-04-07
+Built by Matthew Snow / [M2AI](https://memyselfplusai.com), using Anthropic's Claude Agent SDK and the A2A JavaScript SDK. [MIT license](LICENSE).
